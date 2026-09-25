@@ -1,0 +1,11 @@
+{
+  "placeholder": {
+    "username": "somePlaceholderUser",
+    "password": "somePlaceholder123"
+  },
+  "invalid": {
+    "username": "definitely_not_a_real_user_12345",
+    "password": "definitely_wrong_password"
+  },
+  "wrongPassword": "not_the_real_qa_password_999"
+}
