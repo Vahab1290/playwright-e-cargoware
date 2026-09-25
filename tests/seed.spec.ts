@@ -5,5 +5,6 @@ test.describe('Seed — environment baseline @smoke', () => {
     await page.goto(`${baseURL}/#!/login`);
     await expect(page.getByRole('textbox', { name: 'Username' })).toBeVisible();
     await expect(page.getByRole('textbox', { name: 'Password' })).toBeVisible();
+    
   });
 });
