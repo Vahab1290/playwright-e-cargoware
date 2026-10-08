@@ -1,6 +1,9 @@
 import { test, expect } from '../src/fixtures/base';
 import { LoginPage } from '../src/pages/LoginPage';
 
+// Login tests must start signed out, so ignore the saved session.
+test.use({ storageState: { cookies: [], origins: [] } });
+
 test.describe('Fr8manage login', () => {
   test('login page shows the login form @smoke', async ({ page }) => {
     const login = new LoginPage(page);
