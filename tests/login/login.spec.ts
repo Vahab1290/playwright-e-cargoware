@@ -1,5 +1,5 @@
-import { test, expect } from '../src/fixtures/base';
-import { LoginPage } from '../src/pages/LoginPage';
+import { test, expect } from '../../src/fixtures/base';
+import { LoginPage } from '../../src/pages/common/LoginPage';
 
 // Login tests must start signed out, so ignore the saved session.
 test.use({ storageState: { cookies: [], origins: [] } });

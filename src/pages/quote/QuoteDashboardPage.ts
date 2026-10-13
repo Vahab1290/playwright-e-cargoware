@@ -1,5 +1,5 @@
 import { Page, Locator } from '@playwright/test';
-import { BasePage } from './basepage';
+import { BasePage } from '../common/basepage';
 
 export class QuoteDashboardPage extends BasePage {
   readonly quoteRefInput: Locator;

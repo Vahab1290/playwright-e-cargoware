@@ -1,5 +1,6 @@
 import { Page, Locator } from '@playwright/test';
-import { BasePage } from './basepage';
+import { BasePage } from '../common/basepage';
+import type { DataRow } from '../../utils/excelReader';
 
 export class QuotePage extends BasePage {
   readonly addQuoteButton: Locator;
@@ -16,6 +17,7 @@ export class QuotePage extends BasePage {
   readonly confirmationCloseIcon: Locator;
   readonly updatedMessage: Locator;
   readonly updatedMessageClose: Locator;
+  readonly cancelledMessage: Locator;
   readonly cancelQuoteButton: Locator;
   readonly copyQuotationButton: Locator;
   readonly convertBookingButton: Locator;
@@ -45,6 +47,8 @@ export class QuotePage extends BasePage {
     // An update shows a toast ("Updated Successfully" with a CLOSE button) instead of the dialog.
     this.updatedMessage = page.locator('md-toast').filter({ hasText: 'Updated Successfully' });
     this.updatedMessageClose = this.updatedMessage.getByRole('button', { name: 'Close' });
+    // Cancelling shows a toast ("Quotation Cancelled Successfully" with a CLOSE button).
+    this.cancelledMessage = page.locator('md-toast').filter({ hasText: 'Quotation Cancelled Successfully' });
     // Several quote tabs can stay mounted at once, so match visible elements only.
     this.cancelQuoteButton = page.getByRole('button', { name: 'Cancel Quote' }).filter({ visible: true });
     this.copyQuotationButton = page.getByRole('button', { name: 'Copy Quotation' }).filter({ visible: true });
@@ -113,7 +117,7 @@ export class QuotePage extends BasePage {
   }
 
   /** Fills the mandatory fields, saves, and returns the new quote ref (closing the confirmation). */
-  async createQuote(data: { Carrier: string; Dest: string; Agent: string; Pieces: string; GrossWt: string; Description: string }): Promise<{ ref: string; description: string }> {
+  async createQuote(data: DataRow): Promise<{ ref: string; description: string }> {
     const description = `${data.Description}-${Date.now()}`;
     await this.openCreateForm();
     await this.selectCarrier(data.Carrier);
@@ -139,6 +143,33 @@ export class QuotePage extends BasePage {
   /** A row in the History tab grid (ui-grid, so match by class and text rather than role). */
   historyRow(text: string): Locator {
     return this.page.locator('.ui-grid-row').filter({ hasText: text }).filter({ visible: true });
+  }
+
+  /**
+   * Convert Booking turns the open quote into an AWB in place. The AWB number is picked from
+   * the stock popup and the flight from the flight popup (locators taken from the Selenium suite).
+   */
+  async convertToBooking(): Promise<void> {
+    await this.convertBookingButton.click();
+
+    // AWB number from stock.
+    await this.page.locator("md-icon[ng-click='viewAwbStock(tab,tab.createRequest)']").filter({ visible: true }).click();
+    await this.page.locator("button[ng-click='select()']").filter({ visible: true }).click();
+
+
+    await this.page.waitForTimeout(5000);
+    // Flight from the flight details popup: take the first listed flight.
+    // The schedule icon often needs a second click before the popup opens, so click until it shows.
+const flightIcon = this.page.locator("md-icon[title='Click to open Flight Details Popup']").filter({ visible: true }).first();
+const flightDialog = this.page.locator('md-dialog.flight-details');
+for (let attempt = 0; attempt < 3 && !(await flightDialog.isVisible()); attempt++) {
+  await flightIcon.click();
+  await flightDialog.waitFor({ state: 'visible', timeout: 10_000 }).catch(() => {});
+}
+await flightDialog.waitFor({ state: 'visible' });
+    // The grid also renders empty placeholder rows, so only rows with text count.
+    await flightDialog.locator('.ui-grid-row').filter({ hasText: /\S/ }).first().locator('.ui-grid-cell').nth(1).click();
+    await flightDialog.locator("button[ng-click='select()']").click();
   }
 
   async cancelQuote(reason: string, comment: string): Promise<void> {
