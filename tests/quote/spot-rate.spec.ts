@@ -2,12 +2,13 @@ import { test, expect } from '../../src/fixtures/quote.fixtures';
 import { getTestData } from '../../src/utils/excelReader';
 
 test('spot rate quote switches Rates to Spot @regression', async ({ page, quote, dashboard }) => {
-  const data = await getTestData('QuoteData.xlsx', 'Create', 'CreateQuote_Valid');
   const spot = await getTestData('QuoteData.xlsx', 'SpotRate', 'SpotRateQuote');
+  // Carrier, Agent and Description come from the Create sheet; Dest, Pieces and GrossWt from the SpotRate sheet.
+  const data = { ...(await getTestData('QuoteData.xlsx', 'Create', 'CreateQuote_Valid')), ...spot };
 
   await quote.openCreateForm();
   await quote.selectCarrier(data.Carrier);
-  await quote.selectDestination(spot.Dest);
+  await quote.selectDestination(data.Dest);
   await quote.selectAgent(data.Agent);
   await quote.fillShipment(data.Pieces, data.GrossWt, `${data.Description}-${Date.now()}`);
 

@@ -14,6 +14,7 @@ export class QuotePage extends BasePage {
   readonly saveButton: Locator;
   readonly confirmationDialog: Locator;
   readonly confirmedMessage: Locator;
+  readonly bookingConfirmedMessage: Locator;
   readonly confirmationCloseIcon: Locator;
   readonly updatedMessage: Locator;
   readonly updatedMessageClose: Locator;
@@ -38,11 +39,14 @@ export class QuotePage extends BasePage {
     this.agent = page.locator("ecw-autocomplete.has-md-open-icon input").filter({ visible: true }).first();
     this.pieces = page.locator("input[ng-model='tab.createRequest.pieces']").filter({ visible: true });
     this.grossWt = page.locator("input[ng-model='tab.createRequest.grosswt']").filter({ visible: true });
-    this.chargeWt = page.getByRole('textbox', { name: 'Charge Wt', exact: true }).filter({ visible: true });
+    // The label gets a "*" when the carrier makes the field mandatory.
+    this.chargeWt = page.getByRole('textbox', { name: /^Charge Wt\s*\*?$/ }).filter({ visible: true });
     this.description = page.locator("input[ng-model='tab.createRequest.commodity']").filter({ visible: true });
     this.saveButton = page.locator("button[ng-click='save()']").filter({ visible: true });
     this.confirmationDialog = page.locator('md-dialog.booking-confirmation-modal');
     this.confirmedMessage = this.confirmationDialog.getByText('Your Quotation Has Been confirmed');
+    // Converting to a booking shows the same dialog, but with booking wording and the AWB number.
+    this.bookingConfirmedMessage = this.confirmationDialog.getByText('Your Booking Has Been confirmed');
     this.confirmationCloseIcon = this.confirmationDialog.locator("md-icon[ng-click='close()']");
     // An update shows a toast ("Updated Successfully" with a CLOSE button) instead of the dialog.
     this.updatedMessage = page.locator('md-toast').filter({ hasText: 'Updated Successfully' });
@@ -116,6 +120,11 @@ export class QuotePage extends BasePage {
     await this.confirmationCloseIcon.click();
   }
 
+  /** Closes the open tab of a quote (the ✕ on "QTE <ref>"), so reopening it loads fresh data. */
+  async closeQuoteTab(ref: string): Promise<void> {
+    await this.page.getByRole('button', { name: `QTE ${ref} close` }).getByRole('button', { name: 'close' }).click();
+  }
+
   /** Fills the mandatory fields, saves, and returns the new quote ref (closing the confirmation). */
   async createQuote(data: DataRow): Promise<{ ref: string; description: string }> {
     const description = `${data.Description}-${Date.now()}`;
@@ -149,7 +158,7 @@ export class QuotePage extends BasePage {
    * Convert Booking turns the open quote into an AWB in place. The AWB number is picked from
    * the stock popup and the flight from the flight popup (locators taken from the Selenium suite).
    */
-  async convertToBooking(): Promise<void> {
+  async convertToBooking(flightNo?: string): Promise<void> {
     await this.convertBookingButton.click();
 
     // AWB number from stock.
@@ -168,7 +177,8 @@ for (let attempt = 0; attempt < 3 && !(await flightDialog.isVisible()); attempt+
 }
 await flightDialog.waitFor({ state: 'visible' });
     // The grid also renders empty placeholder rows, so only rows with text count.
-    await flightDialog.locator('.ui-grid-row').filter({ hasText: /\S/ }).first().locator('.ui-grid-cell').nth(1).click();
+    // Pick the given flight, or the first listed flight when none is given.
+    await flightDialog.locator('.ui-grid-row').filter({ hasText: flightNo ?? /\S/ }).first().locator('.ui-grid-cell').nth(1).click();
     await flightDialog.locator("button[ng-click='select()']").click();
   }
 

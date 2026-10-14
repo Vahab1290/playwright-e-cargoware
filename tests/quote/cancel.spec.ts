@@ -3,7 +3,9 @@ import { getTestData } from '../../src/utils/excelReader';
 
 test('cancel a quote changes status to Quotation Lost @regression', async ({ quote, dashboard }) => {
   const cancel = await getTestData('QuoteData.xlsx', 'Cancel', 'CancelQuote');
-  const { ref } = await quote.createQuote(await getTestData('QuoteData.xlsx', 'Create', 'CreateQuote_Valid'));
+  const create = await getTestData('QuoteData.xlsx', 'Create', 'CreateQuote_Valid');
+  // Carrier, Agent and Description come from the Create sheet; Dest, Pieces and GrossWt from the Cancel sheet.
+  const { ref } = await quote.createQuote({ ...create, ...cancel });
 
  
   await quote.cancelQuote(cancel.Reason, cancel.Comment);

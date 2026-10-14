@@ -16,10 +16,15 @@ test('update a quote pieces and weight @regression', async ({ quote, dashboard }
   // Save is slow on QA; wait for the "Updated Successfully" toast right after saving.
   await expect(quote.updatedMessage).toBeVisible({ timeout: 120_000 });
 
-  // History tab records the quote events.
+  // History tab records the quote events. The open tab keeps the History it first loaded,
+  // so close and reopen the quote to load the latest.
+  await quote.closeQuoteTab(ref);
+  await dashboard.show();
+  await dashboard.openQuote(ref);
   await quote.openTab('History');
   // The update is logged as a mail event ("UPDATE QUOTATION MAIL SENT FROM ... TO ...").
-  await expect(quote.historyRow('UPDATE QUOTATION MAIL SENT')).toBeVisible({ timeout: 30_000 });
+  // Soft check: a missing History row is reported, but the dashboard checks still run.
+  await expect.soft(quote.historyRow('UPDATE QUOTATION MAIL SENT')).toBeVisible({ timeout: 30_000 });
 
   // The dashboard grid shows the updated pieces and weight.
   await dashboard.show();
@@ -47,7 +52,7 @@ test('update a quote: add and delete charges @regression', async ({ quote, dashb
   await expect.poll(() => pricing.soldAmount(), { timeout: 30_000 }).toBeCloseTo(startSold + added, 2);
   await expect.poll(() => pricing.totalAmountValue()).toBeCloseTo(startTotal + added, 2);
 
-  
+
   // Delete a charge: once saved, Sold Amount and Total Amount go down by its selling amount and the line is gone.
   const removed = await pricing.chargeAmount(data.DeleteCode);
   await pricing.deleteCharge(data.DeleteCode);
